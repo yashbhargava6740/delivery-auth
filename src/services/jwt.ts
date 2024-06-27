@@ -9,7 +9,7 @@ class JWTService {
             id: user?.id,
             email: user?.email
         }
-        const token = JWT.sign(payload, JWT_SECRET);
+        const token = JWT.sign(payload, JWT_SECRET, {expiresIn: '3h'});
         return token;
     }
     public static decodeToken(token: string) {

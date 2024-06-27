@@ -5,6 +5,8 @@ export const types = `
         password: String!
         name: String!
         role: String!
+        address: String!
+        phone: String!
         Orders: [Order] 
         createdAt: String!
         updatedAt: String!
