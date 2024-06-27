@@ -2,7 +2,7 @@ import { prismaClient } from '../../client/db/prismaClient';
 import { GraphQlContext } from '../../interfaces';
 import JWTService from '../../services/jwt';
 import express from 'express';
-import { redisClient } from '../../redis';
+import { redisClient } from '../../client/redis';
 const argon2 = require('argon2');
 const queries = {
     getCurrentUser: async (parent: any, args: any, ctx: GraphQlContext) => {
@@ -10,14 +10,15 @@ const queries = {
         if (!id) return null;
 
         try {
-            const userDataFromRedis = await redisClient.get(`user:${id}:info`);
+            const userDataFromRedis = await redisClient.get(`user:${id}:token`);
             if (userDataFromRedis) {
                 return JSON.parse(userDataFromRedis);
             }
+            console.log("here is the ",userDataFromRedis);
 
             const user = await prismaClient.user.findUnique({ where: { id } });
             if (user) {
-                await redisClient.set(`user:${id}:info`, JSON.stringify(user), 'EX', 3600);
+                await redisClient.set(`user:${id}:token`, JSON.stringify(user), 'EX', 3600);
                 return user;
             } else {
                 throw new Error("User not found in database!");

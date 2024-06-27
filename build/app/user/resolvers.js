@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolvers = void 0;
 const prismaClient_1 = require("../../client/db/prismaClient");
 const jwt_1 = __importDefault(require("../../services/jwt"));
-const redis_1 = require("../../redis");
+const redis_1 = require("../../client/redis");
 const argon2 = require('argon2');
 const queries = {
     getCurrentUser: (parent, args, ctx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -24,13 +24,14 @@ const queries = {
         if (!id)
             return null;
         try {
-            const userDataFromRedis = yield redis_1.redisClient.get(`user:${id}:info`);
+            const userDataFromRedis = yield redis_1.redisClient.get(`user:${id}:token`);
             if (userDataFromRedis) {
                 return JSON.parse(userDataFromRedis);
             }
+            console.log("here is the ", userDataFromRedis);
             const user = yield prismaClient_1.prismaClient.user.findUnique({ where: { id } });
             if (user) {
-                yield redis_1.redisClient.set(`user:${id}:info`, JSON.stringify(user), 'EX', 3600);
+                yield redis_1.redisClient.set(`user:${id}:token`, JSON.stringify(user), 'EX', 3600);
                 return user;
             }
             else {
