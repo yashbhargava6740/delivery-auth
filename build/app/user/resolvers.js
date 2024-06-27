@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolvers = void 0;
 const prismaClient_1 = require("../../client/db/prismaClient");
 const jwt_1 = __importDefault(require("../../services/jwt"));
+const redis_1 = require("../../redis");
 const argon2 = require('argon2');
 const queries = {
     getCurrentUser: (parent, args, ctx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -22,11 +23,24 @@ const queries = {
         const id = (_a = ctx.user) === null || _a === void 0 ? void 0 : _a.id;
         if (!id)
             return null;
-        const user = yield prismaClient_1.prismaClient.user.findUnique({ where: { id } });
-        if (user)
-            return user;
-        else
-            throw new Error("User not found in database!");
+        try {
+            const userDataFromRedis = yield redis_1.redisClient.get(`user:${id}:info`);
+            if (userDataFromRedis) {
+                return JSON.parse(userDataFromRedis);
+            }
+            const user = yield prismaClient_1.prismaClient.user.findUnique({ where: { id } });
+            if (user) {
+                yield redis_1.redisClient.set(`user:${id}:info`, JSON.stringify(user), 'EX', 3600);
+                return user;
+            }
+            else {
+                throw new Error("User not found in database!");
+            }
+        }
+        catch (error) {
+            console.error("Error fetching user:", error);
+            throw new Error("Failed to fetch user information");
+        }
     })
 };
 const mutations = {
@@ -35,9 +49,11 @@ const mutations = {
             if (!email || !password)
                 throw new Error('Email and password are required');
             console.log(email, password);
-            const userInDb = yield prismaClient_1.prismaClient.user.findUnique({ where: {
+            const userInDb = yield prismaClient_1.prismaClient.user.findUnique({
+                where: {
                     email: email,
-                } });
+                }
+            });
             if (!userInDb)
                 throw new Error('Invalid email');
             if (yield argon2.verify(userInDb.password, password, {
@@ -46,6 +62,7 @@ const mutations = {
                 hashLength: 50,
             })) {
                 const jwt_token = jwt_1.default.generateWebToken(userInDb);
+                yield redis_1.redisClient.set(`user:${userInDb.id}:token`, JSON.stringify(userInDb), 'EX', 3600);
                 // res.cookie('jwt', jwt_token, {httpOnly: true, secure: true});
                 return jwt_token;
             }
