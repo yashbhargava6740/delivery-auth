@@ -2,11 +2,14 @@ import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import express from "express";
 import { user } from "./user";
+import cors from "cors";
+import { Request } from "express";
 import JWTService from "../services/jwt";
 import cookieParser from "cookie-parser";
 export async function initServer() {
   const app = express();
   app.use(express.json());
+  app.use(cors<Request>());
   app.use(cookieParser());
   const graphQLServer = new ApolloServer({
     typeDefs: `
