@@ -7,7 +7,8 @@ class JWTService {
     public static generateWebToken(user: User) {
         const payload : JWTUser = {
             id: user?.id,
-            email: user?.email
+            email: user?.email,
+            role: user?.role
         }
         const token = JWT.sign(payload, JWT_SECRET, {expiresIn: '3h'});
         return token;
